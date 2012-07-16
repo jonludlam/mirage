@@ -56,6 +56,9 @@ void failsafe_callback(void);
 
 #define __pte(x) ((pte_t) { (x) } )
 
+
+start_info_t *xen_info;
+
 static
 shared_info_t *map_shared_info(unsigned long pa)
 {
@@ -73,10 +76,8 @@ shared_info_t *map_shared_info(unsigned long pa)
 void
 arch_init(start_info_t *si)
 {
-    /* Copy the start_info struct to a globally-accessible area. */
-    /* WARN: don't do printk before here, it uses information from
-       shared_info. Use xprintk instead. */
-    memcpy(&start_info, si, sizeof(*si));
+    /* Set up our start_info pointer */
+    xen_info = si;
 
     /* set up minimal memory infos */
     phys_to_machine_mapping = (unsigned long *)start_info.mfn_list;
