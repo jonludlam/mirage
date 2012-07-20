@@ -43,6 +43,8 @@
 #include <xen/memory.h>
 #include <log.h>
 
+#define MM_DEBUG 1
+
 #ifdef MM_DEBUG
 #define DEBUG(_f, _a...) \
     printk("MINI_OS(file=mm.c, line=%d) " _f "\n", __LINE__, ## _a)
@@ -70,7 +72,8 @@ static void new_pt_frame(unsigned long *pt_pfn, unsigned long prev_l_mfn,
     int rc;
     
     prot_e = prot_t = 0;
-    DEBUG("Allocating new L%d pt frame for pfn=%lx, "
+    if(level>1)
+      DEBUG("new L%d pfn=%lx, "
           "prev_l_mfn=%lx, offset=%lx", 
           level, *pt_pfn, prev_l_mfn, offset);
 
@@ -845,8 +848,6 @@ static void clear_bootstrap(void)
         printk("Unable to unmap NULL page. rc=%d\n", rc);
 }
 
-void arch_init_p2m(unsigned long max_pfn)
-{
 #define L1_P2M_SHIFT    9
 #define L2_P2M_SHIFT    18    
 #define L3_P2M_SHIFT    27    
@@ -855,8 +856,16 @@ void arch_init_p2m(unsigned long max_pfn)
 #define L3_P2M_ENTRIES  (1 << (L3_P2M_SHIFT - L2_P2M_SHIFT))    
 #define L1_P2M_MASK     (L1_P2M_ENTRIES - 1)    
 #define L2_P2M_MASK     (L2_P2M_ENTRIES - 1)    
-#define L3_P2M_MASK     (L3_P2M_ENTRIES - 1)    
-    
+#define L3_P2M_MASK     (L3_P2M_ENTRIES - 1)        
+#define ENTRIES_PER_PAGE (PAGE_SIZE / sizeof(unsigned long))
+
+void arch_rebuild_p2m()
+{
+  printk("Need to do this to suspend again");
+}
+
+void arch_init_p2m(unsigned long max_pfn)
+{
     unsigned long *l1_list = NULL, *l2_list = NULL, *l3_list;
     unsigned long pfn;
     

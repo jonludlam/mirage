@@ -17,6 +17,11 @@
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
 
+shared_info_t *map_shared_info(unsigned long pa);
+void unmap_shared_info();
+void init_time();
+void arch_rebuild_p2m();
+
 static unsigned int reasons[] = {
   SHUTDOWN_poweroff,
   SHUTDOWN_reboot,
@@ -33,3 +38,39 @@ stub_sched_shutdown(value v_reason)
     CAMLreturn(Val_unit);
 }
 
+CAMLprim value
+stub_hypervisor_suspend(value unit)
+{
+  CAMLparam0();
+  int cancelled;
+
+  /* Turn the store and console mfns to pfns - required because xc_domain_restore uses these values */
+  xen_info->store_mfn = mfn_to_pfn(xen_info->store_mfn);
+  xen_info->console.domU.mfn = mfn_to_pfn(xen_info->console.domU.mfn);
+
+  /* canonicalize_pagetables can't cope with pagetable entries that are outside of the guest's mfns,
+     so we must unmap anything outside of our space */
+  unmap_shared_info();
+  
+  cancelled = HYPERVISOR_suspend(virt_to_mfn(xen_info));
+
+  if(cancelled) {
+    xen_info->store_mfn = pfn_to_mfn(xen_info->store_mfn);
+    xen_info->console.domU.mfn = pfn_to_mfn(xen_info->console.domU.mfn);
+  }
+
+  trap_init();
+
+  init_events();
+
+  setup_xen_features();
+
+  HYPERVISOR_shared_info = map_shared_info(start_info.shared_info);
+
+  init_time();
+
+
+  /*  arch_rebuild_p2m();*/
+
+  CAMLreturn(Val_int(cancelled));
+}

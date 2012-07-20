@@ -22,3 +22,4 @@ type reason =
 
 external shutdown: reason -> unit = "stub_sched_shutdown"
 
+external suspend: unit -> int = "stub_hypervisor_suspend"

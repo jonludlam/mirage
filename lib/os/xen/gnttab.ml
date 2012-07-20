@@ -137,8 +137,10 @@ let with_mapping handle domid r perm fn =
 let map_contiguous_grant_refs handle domid rs perm = failwith "Unimplemented!"
 
 let _ =
-    Printf.printf "gnttab_init: %d\n%!" (Raw.nr_entries () - 1);
+    Printf.printf "Not initialising grant tables";
+    (*Printf.printf "gnttab_init: %d\n%!" (Raw.nr_entries () - 1);
     for i = Raw.nr_reserved () to Raw.nr_entries () - 1 do
         put (Int32.of_int i);
     done;
-    Raw.init ()
+    Raw.init ()*)
+    ()
