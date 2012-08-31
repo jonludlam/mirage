@@ -21,22 +21,23 @@ let suspend () =
 let xs_watch () = 
   lwt () = Console.log_s (Printf.sprintf "xs_watch ()") in
   let xsh = Xs.t in
-  Xs.monitor_path xsh ("control/shutdown", "XXX") 1000.0
-    (fun (k,v) ->
-         lwt () = Console.log_s (Printf.sprintf "watch callback: [ %s = %s ]\n%!" k v) in
-         lwt () = Console.log_s (Printf.sprintf "About to dir:") in
-	 lwt dir = xsh.Xs.directory "control" in
-	 lwt () = Console.log_s (Printf.sprintf "Got this list: [%s]" (String.concat "," dir)) in
-	 if List.mem "shutdown" dir then  begin
-	     lwt msg = try_lwt xsh.Xs.read k with _ -> return "" in
-	     lwt () = Console.log_s (Printf.sprintf "Got control message: %s" msg) in
-	     match msg with
-	     | "suspend" -> 
-                  lwt () = xsh.Xs.rm "control/shutdown" in
-                  lwt _ = suspend () in
-                  return true
-             | _ -> return false
-        end else return false)
+  let rec inner () = 
+    lwt dir = xsh.Xs.directory "control" in
+    lwt result =
+      if List.mem "shutdown" dir then  begin
+      lwt msg = try_lwt xsh.Xs.read "control/shutdown" with _ -> return "" in
+      lwt () = Console.log_s (Printf.sprintf "Got control message: %s" msg) in
+      match msg with
+      | "suspend" -> 
+        lwt () = xsh.Xs.rm "control/shutdown" in
+        lwt _ = suspend () in
+        return true
+      | _ -> return false
+      end else return false
+    in
+    lwt () = Time.sleep 1.0 in
+    inner ()
+  in inner ()
 
 let main () =
   Random.self_init ();
