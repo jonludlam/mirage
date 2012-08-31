@@ -14,9 +14,9 @@ let rec echo_server =
     echo_server (num_lines - 1)
 
 let suspend () =
-  let cancelled = Sched.suspend () in
+  lwt cancelled = Sched.suspend () in
   Console.log (Printf.sprintf "cancelled=%d" cancelled);
-  ()
+  Lwt.return cancelled
 
 let xs_watch () = 
   lwt () = Console.log_s (Printf.sprintf "xs_watch ()") in
@@ -33,7 +33,7 @@ let xs_watch () =
 	     match msg with
 	     | "suspend" -> 
                   lwt () = xsh.Xs.rm "control/shutdown" in
-                  let () = suspend () in
+                  lwt _ = suspend () in
                   return true
              | _ -> return false
         end else return false)
