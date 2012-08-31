@@ -26,7 +26,7 @@ type domid = int
 type con
 
 type xsh = {
-	con : con;
+	mutable con : con;
 	debug: string list -> string Lwt.t;
 	directory : string -> string list Lwt.t;
 	read : string -> string Lwt.t;
@@ -63,3 +63,6 @@ val monitor_path : xsh
                  -> unit Lwt.t
 
 val t : xsh
+
+val pre_suspend : unit -> unit Lwt.t
+val post_suspend : unit -> unit

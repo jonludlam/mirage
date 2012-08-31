@@ -34,11 +34,20 @@ let wait port =
 let run () =
   for port = 0 to nr_events - 1 do
     (* XXX workaround rare event wedge bug XXX *)
-    if true || evtchn_test_and_clear port then begin
+    if evtchn_test_and_clear port then begin
       Lwt_sequence.iter_node_l (fun node ->
         let u = Lwt_sequence.get node in
         Lwt_sequence.remove node;
         Lwt.wakeup u ()
       ) event_cb.(port)
     end
+  done
+
+let post_suspend () =
+  for port = 0 to nr_events - 1 do
+    Lwt_sequence.iter_node_l (fun node ->
+        let u = Lwt_sequence.get node in
+        Lwt_sequence.remove node;
+        Lwt.wakeup_exn u (Lwt.Canceled)
+      ) event_cb.(port)
   done

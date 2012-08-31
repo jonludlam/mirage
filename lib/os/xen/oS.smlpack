@@ -1,4 +1,3 @@
-Sched
 Io_page
 Gnttab
 Activations
@@ -18,6 +17,7 @@ Queueop
 Xsraw
 Xst
 Xs
+Sched
 Env
 Netif
 Blkif

@@ -159,7 +159,15 @@ let create () =
 	let con = { xb = xb; watchevents = Hashtbl.create 10 } in
 	ignore(dispatcher con);
 	con
-    
+
+(* XXX here we might want to reissue watches, or we might want to
+   cancel all of the old ones *)
+let post_suspend con =
+  create ()
+
+let pre_suspend con = 
+  Xb.pre_suspend con.xb
+
 let rpc request con =
     let th, wakeup = Lwt.wait () in
     let rid = Xs_packet.get_rid request in

@@ -21,7 +21,7 @@ type domid = int
 
 type xsh =
 {
-	con: con;
+	mutable con: con;
 	debug: string list -> string Lwt.t;
 	directory: string -> string list Lwt.t;
 	read: string -> string Lwt.t;
@@ -72,6 +72,13 @@ let read_watchevent xsh = Xsraw.read_watchevent xsh.con
 let t =
     let xsraw = Xsraw.create () in
     get_operations xsraw
+
+let pre_suspend () =
+  Xsraw.pre_suspend t.con;
+  Lwt.return ()
+
+let post_suspend () =
+  t.con <- Xsraw.post_suspend t.con
 
 exception Timeout
 

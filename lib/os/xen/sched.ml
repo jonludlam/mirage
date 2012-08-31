@@ -22,4 +22,12 @@ type reason =
 
 external shutdown: reason -> unit = "stub_sched_shutdown"
 
-external suspend: unit -> int = "stub_hypervisor_suspend"
+external _suspend: unit -> int = "stub_hypervisor_suspend"
+
+let suspend () =
+  lwt () = Xs.pre_suspend () in
+  let result = _suspend () in
+  Activations.post_suspend ();
+  Xs.post_suspend ();
+  Lwt.return result
+  

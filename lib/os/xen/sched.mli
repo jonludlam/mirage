@@ -21,5 +21,5 @@ type reason =
   | Crash
 
 val shutdown: reason -> unit
-val suspend: unit -> int
+val suspend: unit -> int Lwt.t
 

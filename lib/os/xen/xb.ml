@@ -40,6 +40,7 @@ type partial_buf = HaveHdr of Xb_partial.pkt | NoHdr of int * string
 type t =
 {
     backend: backend;
+    mutable closed: bool;
     pkt_in: Packet.t Queue.t;
     pkt_out: Packet.t Queue.t;
     mutable partial_in: partial_buf;
@@ -52,6 +53,7 @@ let init_partial_in () = NoHdr
 let queue con pkt = Queue.push pkt con.pkt_out
 
 let rec read t s len =
+    if t.closed then raise End_of_file;
     let rd = Ring.Xenstore.unsafe_read t.backend.ring s len in
         match rd with 
         | 0 ->
@@ -62,6 +64,7 @@ let rec read t s len =
              return rd
 
 let rec write t s len =
+    if t.closed then raise End_of_file;
     let ws = Ring.Xenstore.unsafe_write t.backend.ring s len in
         match ws with
         | 0 ->
@@ -130,11 +133,14 @@ let init () =
   let notify () = Evtchn.notify evtchn in
   let waiters = Lwt_sequence.create () in
   let backend = { ring=ring; notify=notify; waiters=waiters } in
-  let con = { backend=backend; pkt_in=Queue.create ();
+  let con = { backend=backend; closed=false; pkt_in=Queue.create ();
     pkt_out=Queue.create (); partial_in = init_partial_in ();
     partial_out = "" } in
   Evtchn.unmask evtchn;
   con
+
+let pre_suspend con =
+  con.closed <- true
 
 let output_len con = Queue.length con.pkt_out
 let has_new_output con = Queue.length con.pkt_out > 0

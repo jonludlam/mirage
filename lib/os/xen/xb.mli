@@ -80,6 +80,7 @@ type backend
 type partial_buf = HaveHdr of Xb_partial.pkt | NoHdr of int * string
 type t = {
   backend : backend;
+  mutable closed : bool;
   pkt_in : Packet.t Queue.t;
   pkt_out : Packet.t Queue.t;
   mutable partial_in : partial_buf;
@@ -100,3 +101,4 @@ val peek_output : t -> Packet.t
 val input_len : t -> int
 val has_in_packet : t -> bool
 val get_in_packet : t -> Packet.t
+val pre_suspend : t -> unit

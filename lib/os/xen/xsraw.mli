@@ -4,6 +4,8 @@ exception Invalid_path of string
 val unexpected_packet : Xb.Op.operation -> Xb.Op.operation -> 'a Lwt.t
 type con
 val create : unit -> con 
+val post_suspend : con -> con
+val pre_suspend : con -> unit
 val split_string : ?limit:int -> char -> string -> string list
 type perm = PERM_NONE | PERM_READ | PERM_WRITE | PERM_RDWR
 type perms = int * perm * (int * perm) list
