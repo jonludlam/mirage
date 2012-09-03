@@ -23,10 +23,10 @@ exception Timeout
 type perms = Xsraw.perms
 
 type domid = int
-type con
+type con = Xsraw.con
 
 type xsh = {
-	mutable con : con;
+	con : con;
 	debug: string list -> string Lwt.t;
 	directory : string -> string list Lwt.t;
 	read : string -> string Lwt.t;
@@ -66,3 +66,4 @@ val t : xsh
 
 val pre_suspend : unit -> unit Lwt.t
 val post_suspend : unit -> unit
+val check : xsh -> unit

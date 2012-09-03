@@ -53,7 +53,8 @@ let init_partial_in () = NoHdr
 let queue con pkt = Queue.push pkt con.pkt_out
 
 let rec read t s len =
-    if t.closed then raise End_of_file;
+(*    lwt () = Console.log_s (Printf.sprintf "Attempting to read: len=%d closed=%b" len t.closed) in*)
+    if t.closed then raise End_of_file else
     let rd = Ring.Xenstore.unsafe_read t.backend.ring s len in
         match rd with 
         | 0 ->
@@ -64,6 +65,7 @@ let rec read t s len =
              return rd
 
 let rec write t s len =
+(*    lwt () = Console.log_s (Printf.sprintf "t.closed=%b" t.closed) in*)
     if t.closed then raise End_of_file;
     let ws = Ring.Xenstore.unsafe_write t.backend.ring s len in
         match ws with
@@ -75,6 +77,7 @@ let rec write t s len =
              return ws
 
 let output con =
+(*    lwt () = Console.log_s "In func: output" in*)
     (* get the output string from a string_of(packet) or partial_out *)
     let s = if String.length con.partial_out > 0 then
             con.partial_out
@@ -85,7 +88,9 @@ let output con =
     (* send data from s, and save the unsent data to partial_out *)
     lwt () = if s <> "" then (
         let len = String.length s in
+(*	lwt () = Console.log_s "About to write" in*)
         lwt sz = write con s len in
+(*        lwt () = Console.log_s "Written" in*)
         let left = String.sub s sz (len - sz) in
         con.partial_out <- left;
         return ()
@@ -96,6 +101,7 @@ let output con =
     return (con.partial_out = "")
 
 let input con =
+(*    lwt () = Console.log_s "In func: input" in*)
     let newpacket = ref false in
     let to_read =
         match con.partial_in with
@@ -130,7 +136,9 @@ let input con =
 let init () =
   let gnt,ring = Ring.Xenstore.alloc_initial () in
   let evtchn = Evtchn.xenstore_port () in
-  let notify () = Evtchn.notify evtchn in
+  let notify () = 
+(*    Console.log "In func: notify";*)
+    Evtchn.notify evtchn in
   let waiters = Lwt_sequence.create () in
   let backend = { ring=ring; notify=notify; waiters=waiters } in
   let con = { backend=backend; closed=false; pkt_in=Queue.create ();

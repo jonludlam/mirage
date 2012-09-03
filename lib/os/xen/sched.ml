@@ -28,6 +28,10 @@ let suspend () =
   lwt () = Xs.pre_suspend () in
   let result = _suspend () in
   Activations.post_suspend ();
+  lwt () = Console.log_s "Before Xs.post_suspend" in
+  Xsraw.check Xs.t.Xs.con;
   Xs.post_suspend ();
+  lwt () = Console.log_s "After Xs.post_suspend" in
+  Xsraw.check Xs.t.Xs.con;
   Lwt.return result
   

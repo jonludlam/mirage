@@ -21,7 +21,7 @@ type domid = int
 
 type xsh =
 {
-	mutable con: con;
+	con: con;
 	debug: string list -> string Lwt.t;
 	directory: string -> string list Lwt.t;
 	read: string -> string Lwt.t;
@@ -41,7 +41,8 @@ type xsh =
 	unwatch: string -> Queueop.token -> unit Lwt.t;
 }
 
-let get_operations con = {
+let get_operations con = 
+  {
 	con = con;
 	debug = (fun commands -> Xsraw.debug commands con);
 	directory = (fun path -> Xsraw.directory 0 path con);
@@ -70,15 +71,18 @@ let get_watchevent xsh = Xsraw.get_watchevent xsh.con
 let read_watchevent xsh = Xsraw.read_watchevent xsh.con
 
 let t =
-    let xsraw = Xsraw.create () in
-    get_operations xsraw
+    let con = Xsraw.create () in
+    get_operations con
 
 let pre_suspend () =
   Xsraw.pre_suspend t.con;
   Lwt.return ()
 
 let post_suspend () =
-  t.con <- Xsraw.post_suspend t.con
+  Xsraw.post_suspend t.con
+
+let check t =
+  Xsraw.check t.con
 
 exception Timeout
 

@@ -34,7 +34,7 @@ type watch_queue = {
 }
 
 type con = {
-	xb: Xb.t;
+    mutable xb: Xb.t;
     watchevents: (Queueop.token, watch_queue) Hashtbl.t;
 }
 
@@ -85,6 +85,7 @@ let pkt_send con =
     | true -> fail Partial_not_empty
     | false ->
         let rec loop_output () = 
+(*	    lwt () = Console.log_s "loop_output" in*)
             lwt w = Xb.output con.xb in
             if w then return () else loop_output ()
         in
@@ -93,6 +94,7 @@ let pkt_send con =
 (* receive one packet - can sleep *)
 let pkt_recv_one con =
         let rec loop_input () =
+(*	    lwt () = Console.log_s "In func: loop_input" in*)
             lwt w = Xb.input con.xb in 
             if w then return () else loop_input ()
         in 
@@ -143,10 +145,10 @@ let rid_to_wakeup = Hashtbl.create 10
 
 let rec dispatcher con =
     lwt pkt = pkt_recv_one con in
-	match Xs_packet.get_ty pkt with
-	| Xb.Op.Watchevent  ->
-		queue_watchevent con pkt;
-		dispatcher con
+    match Xs_packet.get_ty pkt with
+    | Xb.Op.Watchevent  ->
+	queue_watchevent con pkt;
+	dispatcher con
     | _ ->
         let rid = Xs_packet.get_rid pkt in
         if not(Hashtbl.mem rid_to_wakeup rid)
@@ -163,18 +165,25 @@ let create () =
 (* XXX here we might want to reissue watches, or we might want to
    cancel all of the old ones *)
 let post_suspend con =
-  create ()
+  con.xb <- Xb.init ();
+  Hashtbl.clear con.watchevents
 
 let pre_suspend con = 
   Xb.pre_suspend con.xb
 
+let check con = 
+  Console.log (Printf.sprintf "check: closed=%b" con.xb.Xb.closed)
+
 let rpc request con =
+(*    lwt () = Console.log_s "In rpc" in*)
     let th, wakeup = Lwt.wait () in
     let rid = Xs_packet.get_rid request in
 	Hashtbl.replace rid_to_wakeup rid wakeup;
     Xb.queue con.xb request;
 	lwt () = pkt_send con in
+(*    lwt () = Console.log_s "Sleeping in rpc" in*)
     lwt pkt = th in
+(*    lwt () = Console.log_s "Woken up!" in*)
     Hashtbl.remove rid_to_wakeup rid;
 
     let request_ty = Xs_packet.get_ty request in

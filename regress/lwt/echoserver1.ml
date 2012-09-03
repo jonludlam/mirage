@@ -20,17 +20,20 @@ let suspend () =
 
 let xs_watch () = 
   lwt () = Console.log_s (Printf.sprintf "xs_watch ()") in
-  let xsh = Xs.t in
   let rec inner () = 
-    lwt dir = xsh.Xs.directory "control" in
+    lwt dir = Xs.t.Xs.directory "control" in
     lwt result =
       if List.mem "shutdown" dir then  begin
-      lwt msg = try_lwt xsh.Xs.read "control/shutdown" with _ -> return "" in
+      lwt msg = try_lwt Xs.t.Xs.read "control/shutdown" with _ -> return "" in
       lwt () = Console.log_s (Printf.sprintf "Got control message: %s" msg) in
       match msg with
       | "suspend" -> 
-        lwt () = xsh.Xs.rm "control/shutdown" in
+        lwt () = Xs.t.Xs.rm "control/shutdown" in
         lwt _ = suspend () in
+        lwt () = Console.log_s "About to read domid" in
+        Xs.check Xs.t;
+        lwt domid = Xs.t.Xs.read "domid" in
+        lwt () = Console.log_s (Printf.sprintf "We're back: domid=%s" domid) in
         return true
       | _ -> return false
       end else return false
