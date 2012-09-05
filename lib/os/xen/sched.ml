@@ -26,12 +26,15 @@ external _suspend: unit -> int = "stub_hypervisor_suspend"
 
 let suspend () =
   lwt () = Xs.pre_suspend () in
+  Gnttab.pre_suspend ();
   let result = _suspend () in
+  Gnttab.post_suspend ();
   Activations.post_suspend ();
   lwt () = Console.log_s "Before Xs.post_suspend" in
   Xsraw.check Xs.t.Xs.con;
   Xs.post_suspend ();
   lwt () = Console.log_s "After Xs.post_suspend" in
   Xsraw.check Xs.t.Xs.con;
+  lwt () = Blkif.post_suspend () in
   Lwt.return result
   

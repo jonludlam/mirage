@@ -17,6 +17,8 @@
 open Lwt
 open Printf
 
+exception Resumed
+
 let rec pow2 = function
   | 0 -> 1
   | n -> 2 * (pow2 (n - 1))
@@ -204,6 +206,19 @@ module Front = struct
      Hashtbl.add t.wakers id u;
      let _ = th >> return (freefn ()) in
      return ()
+
+   let pre_suspend t = return ()
+
+   let post_suspend t = 
+     Hashtbl.iter (fun id th -> 
+       Lwt.wakeup_exn th Gnttab.Resumed) t.wakers;
+    (* Check for any sleepers waiting for free space *)
+     let rec loop () = 
+       match Lwt_sequence.take_opt_l t.waiters with
+	 | None -> ()
+	 | Some u -> Lwt.wakeup_exn u Gnttab.Resumed; loop () 
+     in loop ()
+       
 end
 
 module Back = struct

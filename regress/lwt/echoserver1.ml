@@ -1,5 +1,6 @@
 open Lwt (* provides >>= and join *)
 open OS  (* provides Time, Console and Main *)
+open Printf
 
 let read_line () =
   Time.sleep (Random.float 2.5) >>
@@ -42,7 +43,33 @@ let xs_watch () =
     inner ()
   in inner ()
 
+let block () =
+ let finished_t, u = Lwt.task () in
+  let listen_t = OS.Devices.listen (fun id ->
+    OS.Devices.find_blkif id >>=
+    function
+    | None -> return ()
+    | Some blkif -> Lwt.wakeup u blkif; return ()
+  ) in
+  (* Get one device *)
+  lwt blkif = finished_t in
+  (* Cancel the listening thread *)
+  Lwt.cancel listen_t;
+  printf "ID: %s\n%!" blkif#id;
+  printf "Connected block device\n%!";
+  printf "Total device size = %Ld\nSector size = %d\n%!" blkif#size blkif#sector_size;
+  printf "Device is read%s\n%!" (if blkif#readwrite then "/write" else "-only");
+
+  let rec inner () =
+    lwt res = Lwt_stream.to_list (blkif#read_512 0L 7L) in
+    let str = Io_page.to_string (List.hd res) in
+    lwt () = Console.log_s (Printf.sprintf "Read a sector (%s)" (String.sub str 0 8)) in
+    Time.sleep 1.0 >> inner ()
+  in inner ()
+
+
 let main () =
   Random.self_init ();
   let _ = xs_watch () in
+  block ();
   echo_server 1000

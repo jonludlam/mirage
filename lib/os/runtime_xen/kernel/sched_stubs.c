@@ -69,8 +69,7 @@ stub_hypervisor_suspend(value unit)
 
   init_time();
 
-
-  /*  arch_rebuild_p2m();*/
+  arch_rebuild_p2m();
 
   CAMLreturn(Val_int(cancelled));
 }

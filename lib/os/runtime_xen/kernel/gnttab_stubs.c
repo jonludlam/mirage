@@ -121,6 +121,8 @@ caml_gnttab_fini(value unit)
     setup.dom = DOMID_SELF;
     setup.nr_frames = 0;
 
+    unmap_frames(gnttab_table, NR_GRANT_FRAMES);
+
     HYPERVISOR_grant_table_op(GNTTABOP_setup_table, &setup, 1);
     CAMLreturn(Val_unit);
 }
