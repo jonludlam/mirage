@@ -85,6 +85,7 @@ let create ~id ~filename : Devices.blkif Lwt.t =
     method readwrite = true
     method ppname = sprintf "Unix.blkif:%s(%s)" id filename
     method destroy = Socket.close t.fd
+    method stats = (0,0,0)
   end)
 
 (* Register Unix.Blkif provider with the device manager *)

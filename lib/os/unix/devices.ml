@@ -29,6 +29,7 @@ type blkif = <
   readwrite: bool;
   ppname: string;
   destroy: unit;
+  stats: int * int * int;
 >
 
 (** Key/value read-only *)

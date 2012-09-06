@@ -86,6 +86,7 @@ let rec restart_threads now =
         sleep_queue := SleepQueue.remove_min !sleep_queue;
         restart_threads now
     | Some{ time = time; thread = thread } when in_the_past now time ->
+        Console.log (Printf.sprintf "Waking up sleeping thread (time=%f now=%f)" time (now ()));
         sleep_queue := SleepQueue.remove_min !sleep_queue;
         Lwt.wakeup thread ();
         restart_threads now

@@ -558,6 +558,7 @@ let create ~id : Devices.blkif Lwt.t =
     method readwrite = dev.t.features.readwrite
     method ppname = sprintf "Xen.blkif:%s" id
     method destroy = unplug id
+    method stats = Ring.Front.get_stats ()
   end)
 
 (* Register Xen.Blkif provider with the device manager *)

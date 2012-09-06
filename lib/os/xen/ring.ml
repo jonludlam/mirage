@@ -17,7 +17,9 @@
 open Lwt
 open Printf
 
-exception Resumed
+let s_ring_full_waits = ref 0
+let s_wakers_killed = ref 0
+let s_waiters_killed = ref 0
 
 let rec pow2 = function
   | 0 -> 1
@@ -146,11 +148,13 @@ module Front = struct
 
   let rec ack_responses t fn =
     let rsp_prod = sring_rsp_prod t.sring in
+    let num = ref 0 in
     while t.rsp_cons != rsp_prod do
       let slot_id = t.rsp_cons in
       let slot = slot t slot_id in
       fn slot;
       t.rsp_cons <- t.rsp_cons + 1;
+      incr num; 
     done;
     if check_for_responses t then ack_responses t fn
 
@@ -160,7 +164,7 @@ module Front = struct
       try
          let u = Hashtbl.find t.wakers id in
          Hashtbl.remove t.wakers id;
-         Lwt.wakeup u resp
+         Lwt.wakeup_later u resp
        with Not_found ->
          printf "RX: ack id wakener not found\n%!"
     );
@@ -175,6 +179,7 @@ module Front = struct
     else begin
       let th, u = Lwt.task () in
       let node = Lwt_sequence.add_r u t.waiters in
+      incr s_ring_full_waits;
       Lwt.on_cancel th (fun _ -> Lwt_sequence.remove node);
       th
     end 
@@ -191,6 +196,7 @@ module Front = struct
     end else begin
       let th,u = Lwt.task () in
       let node = Lwt_sequence.add_r u t.waiters in
+      incr s_ring_full_waits;
       Lwt.on_cancel th (fun _ -> Lwt_sequence.remove node);
       th >>
       push_request_and_wait t reqfn
@@ -211,14 +217,21 @@ module Front = struct
 
    let post_suspend t = 
      Hashtbl.iter (fun id th -> 
-       Lwt.wakeup_exn th Gnttab.Resumed) t.wakers;
+       Lwt.wakeup_exn th Gnttab.Resumed;
+       incr s_wakers_killed
+     ) t.wakers;
     (* Check for any sleepers waiting for free space *)
      let rec loop () = 
        match Lwt_sequence.take_opt_l t.waiters with
 	 | None -> ()
-	 | Some u -> Lwt.wakeup_exn u Gnttab.Resumed; loop () 
+	 | Some u -> 
+	   Lwt.wakeup_exn u Gnttab.Resumed;
+	   incr s_waiters_killed;
+	   loop () 
      in loop ()
-       
+
+   let get_stats () =
+     (!s_ring_full_waits, !s_wakers_killed, !s_waiters_killed)
 end
 
 module Back = struct

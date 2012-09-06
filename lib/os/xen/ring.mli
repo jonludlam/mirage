@@ -109,6 +109,8 @@ module Front : sig
   val push_request_async : ('a,'b) t -> (Io_page.t -> 'b) -> (unit -> unit) -> unit Lwt.t 
 
   val post_suspend : ('a,'b) t -> unit
+
+  val get_stats : unit -> int * int * int
 end
 
 module Back : sig

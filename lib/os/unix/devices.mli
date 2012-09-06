@@ -25,6 +25,7 @@ type blkif = <
   sector_size : int;
   size: int64;
   readwrite: bool;
+  stats: int * int * int;
 >
 
 type kv_ro = <

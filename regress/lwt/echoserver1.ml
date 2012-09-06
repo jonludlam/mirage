@@ -60,12 +60,68 @@ let block () =
   printf "Total device size = %Ld\nSector size = %d\n%!" blkif#size blkif#sector_size;
   printf "Device is read%s\n%!" (if blkif#readwrite then "/write" else "-only");
 
-  let rec inner () =
-    lwt res = Lwt_stream.to_list (blkif#read_512 0L 7L) in
-    let str = Io_page.to_string (List.hd res) in
-    lwt () = Console.log_s (Printf.sprintf "Read a sector (%s)" (String.sub str 0 8)) in
-    Time.sleep 1.0 >> inner ()
-  in inner ()
+  let n = 31 in
+  let liveness = Array.init n (fun _ -> 0) in
+
+  let rec live_print () =
+    let l = Array.to_list liveness in
+    Array.iteri (fun i _ -> liveness.(i) <- 0) liveness;
+    let s = String.concat " " (List.map string_of_int l) in
+    lwt () = Console.log_s (Printf.sprintf "%f %s" (Clock.time ()) s) in
+    let (x,y,z) = blkif#stats in
+    lwt () = Console.log_s (Printf.sprintf "%d %d %d" x y z) in
+    Time.sleep 1.0 >> live_print ()
+  in
+
+  let _ = live_print () in
+
+  let dump_page p =
+    let s = ref [] in
+    let b = Buffer.create 128 in
+    for i=0 to 1023 do
+      if i>0 && i mod 32 = 0 then begin
+	s := (Buffer.contents b) :: !s;
+	Buffer.clear b;
+      end;
+      Buffer.add_string b (Printf.sprintf "%02x " (Char.code p.[i]))
+    done;
+    let rec inner s =
+      match s with 
+	| s::ss ->
+	  Console.log_s s >> Time.sleep 0.1 >> inner ss
+	| [] -> 
+	  Lwt.return ()
+    in inner (List.rev !s)
+  in
+
+  let rec inner page n i =
+    let start = Int64.mul 8L (Int64.of_int n) in
+    page.{i mod 4096} <- Char.chr (i mod 256);
+    lwt () = blkif#write_page (Int64.mul start 512L) page in
+    lwt p = Lwt_stream.to_list (blkif#read_512 start 8L) in
+    let newpage = Io_page.to_string (List.hd p) in
+    let oldpage = Io_page.to_string page in
+(*    lwt () = 
+	if newpage <> oldpage 
+	then 
+	  Console.log_s "Error! new:" >> 
+	    dump_page newpage >> 
+	    Time.sleep 1.0 >> 
+	    Console.log_s "old:" >> 
+	    dump_page oldpage  >>
+	    Time.sleep 10.0 
+	else return () in*)
+
+    liveness.(n) <- liveness.(n) + 1;
+    inner page n (i+1);
+  in 
+
+  for i=0 to n-1 do
+    ignore(inner (Io_page.get ()) i 0);
+  done;
+
+  Lwt.return ()
+
 
 
 let main () =
